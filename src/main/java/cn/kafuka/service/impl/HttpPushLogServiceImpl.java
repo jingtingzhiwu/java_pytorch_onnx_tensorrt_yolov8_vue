@@ -243,7 +243,7 @@ public class HttpPushLogServiceImpl implements HttpPushLogService {
         //(3).获取到图片名称及该张图片的minio桶名称
         String imgFileName = jsonObject.getString("img_file_name");
         String bucketName = jsonObject.getString("bucket_name");
-        String imgUrl = minioUtil.getEndpointUrl() + "/" +  bucketName + "/" + imgFileName;
+        String imgUrl = minioUtil.getAccessUrl()+ "/" +  bucketName + "/" + imgFileName;
 
         //(4).告警时间
         String alarmTime = jsonObject.getString("alarm_time");

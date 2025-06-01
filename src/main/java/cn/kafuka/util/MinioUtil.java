@@ -169,11 +169,11 @@ public class MinioUtil {
     }
 
     public String getDefaultPicUrl() {
-        return minioEndpoint + "/default/kafuka_picture.jpg";
+        return minioAccess + "/default/kafuka_picture.jpg";
     }
 
     public String getDefaultFileUrl() {
-        return minioEndpoint + "/default/example.file";
+        return minioAccess + "/default/example.file";
     }
 
 

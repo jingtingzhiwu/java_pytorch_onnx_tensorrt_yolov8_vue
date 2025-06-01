@@ -68,7 +68,7 @@ public class AlarmDataServiceImpl implements AlarmDataService {
         attr.put("id", e.getId());
         attr.put("name", e.getName());
         attr.put("alarmType", e.getAlarmType());
-        attr.put("alarmImage", minioUtil.getEndpointUrl() + e.getAlarmImage());
+        attr.put("alarmImage", minioUtil.getAccessUrl() + e.getAlarmImage());
         attr.put("alarmTime", e.getAlarmTime());
         attr.put("alarmDate", e.getAlarmDate());
         attr.put("taskNo", e.getTaskNo());
@@ -95,7 +95,7 @@ public class AlarmDataServiceImpl implements AlarmDataService {
                     attr.put("id", e.getId());
                     attr.put("name", e.getName());
                     attr.put("alarmType", e.getAlarmType());
-                    attr.put("alarmImage", minioUtil.getEndpointUrl() + e.getAlarmImage());
+                    attr.put("alarmImage", minioUtil.getAccessUrl() + e.getAlarmImage());
                     attr.put("alarmTime", e.getAlarmTime());
                     attr.put("alarmDate", e.getAlarmDate());
                     attr.put("taskNo", e.getTaskNo());

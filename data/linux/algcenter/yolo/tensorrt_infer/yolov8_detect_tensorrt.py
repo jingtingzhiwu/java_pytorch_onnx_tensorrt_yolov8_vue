@@ -1,5 +1,5 @@
 from models import TRTModule
-from gsis_util import push_minio_rocketmq
+#from gsis_util import push_minio_rocketmq
 import argparse
 from pathlib import Path
 import concurrent.futures
@@ -155,8 +155,19 @@ def main(args: argparse.Namespace) -> None:
         # --2.跳帧检测
         detect_skip_index += 1
         if (detect_skip_index % detect_skip != 0):
-            pipe_ori.stdin.write(frame.tobytes())
-            pipe_dec.stdin.write(frame.tobytes())
+            try:
+                pipe_ori.stdin.write(frame.tobytes())
+                pipe_dec.stdin.write(frame.tobytes())
+            except BrokenPipeError as e:
+                print(f"Error: BrokenPipeError encountered during frame {frame_count} (skip frame).")
+                if pipe_ori.poll() is not None:
+                    print(f"Debug: pipe_ori (Original Stream) process exited with code {pipe_ori.poll()}")
+                if pipe_dec.poll() is not None:
+                    print(f"Debug: pipe_dec (Detection Stream) process exited with code {pipe_dec.poll()}")
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+                break
             continue
 
         # --3.帧数据预处理(ori_draw:原始画面，draw:写入label后的检测画面，frame:用于转换为张量tensor)
@@ -178,8 +189,19 @@ def main(args: argparse.Namespace) -> None:
         if bboxes.numel() == 0:
             cls_score.clear()
             # 当前帧没检测出目标，直接推送原始视频帧
-            pipe_ori.stdin.write(ori_draw.tobytes())
-            pipe_dec.stdin.write(draw.tobytes())
+            try:
+                pipe_ori.stdin.write(ori_draw.tobytes())
+                pipe_dec.stdin.write(draw.tobytes())
+            except BrokenPipeError as e:
+                print(f"Error: BrokenPipeError encountered during frame {frame_count} (no detection).")
+                if pipe_ori.poll() is not None:
+                    print(f"Debug: pipe_ori (Original Stream) process exited with code {pipe_ori.poll()}")
+                if pipe_dec.poll() is not None:
+                    print(f"Debug: pipe_dec (Detection Stream) process exited with code {pipe_dec.poll()}")
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+                break
             continue
         bboxes -= dwdh
         bboxes /= ratio
@@ -308,8 +330,19 @@ def main(args: argparse.Namespace) -> None:
                     #cv2.putText(draw, text_mix, (x1_mix, _y1_mix), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
 
         # --8.推送原始视频和检测画面到流媒体服务器
-        pipe_ori.stdin.write(ori_draw.tobytes())
-        pipe_dec.stdin.write(draw.tobytes())
+        try:
+            pipe_ori.stdin.write(ori_draw.tobytes())
+            pipe_dec.stdin.write(draw.tobytes())
+        except BrokenPipeError as e:
+            print(f"Error: BrokenPipeError encountered during frame {frame_count} (with detection).")
+            if pipe_ori.poll() is not None:
+                print(f"Debug: pipe_ori (Original Stream) process exited with code {pipe_ori.poll()}")
+            if pipe_dec.poll() is not None:
+                print(f"Debug: pipe_dec (Detection Stream) process exited with code {pipe_dec.poll()}")
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+            break
         #print("per frame detection cost time:",str((time.time() - start_time)*1000),"ms")
 
         # --9.所有的目标分类遍历完也没有找到想要的目标，不推送minio_rocketmq，继续处理下一帧
@@ -331,7 +364,7 @@ def main(args: argparse.Namespace) -> None:
                 "cls_score": str(cls_score),
                 "alarm_time": date_str_s
             }
-            pool.submit(push_minio_rocketmq, draw, img_file_name, bucket_name, group_name, topic, msg_body)
+            #pool.submit(push_minio_rocketmq, draw, img_file_name, bucket_name, group_name, topic, msg_body)
             push_flag = 0
 
         # --11.重置字典cls_score，以便记录下一帧画面的分类及评分
@@ -364,6 +397,7 @@ def get_ffmpeg_pipe(size_str, fps, stream_server_url):
         '-preset', 'ultrafast',
         '-f', 'flv',
         stream_server_url]
+    print(f"Debug: FFmpeg command: {' '.join(ffmpeg_command)}")
     pipe = subprocess.Popen(ffmpeg_command, stdin=subprocess.PIPE)
     return pipe
 

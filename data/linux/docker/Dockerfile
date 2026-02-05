@@ -1,10 +1,18 @@
 # 基于官方的Ubuntu镜像
 FROM ubuntu:20.04
 
+#ENV http_proxy=http://192.168.1.3:7890
+#ENV https_proxy=http://192.168.1.3:7890
+#ENV no_proxy=localhost,127.0.0.1
+
 # 安装JDK
-RUN apt-get update
-RUN apt-get install -y openjdk-11-jdk
- 
+RUN sed -i 's@http://.*archive.ubuntu.com@http://mirrors.aliyun.com@g' /etc/apt/sources.list && \
+    sed -i 's@http://.*security.ubuntu.com@http://mirrors.aliyun.com@g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y ca-certificates && \
+    apt-get update && \
+    apt-get install -y openjdk-11-jdk
+
 # 安装Python
 RUN apt-get install -y python3.8
 RUN apt-get install -y python3-distutils
@@ -16,19 +24,19 @@ RUN apt-get install -y ffmpeg
 
 # 安装opencv(源码编译安装)
 RUN apt-get install -y cmake
-RUN apt-get install -y build-essential 
+RUN apt-get install -y build-essential
 RUN apt-get install -y libgtk2.0-dev libavcodec-dev libavformat-dev libjpeg-dev libswscale-dev libtiff5-dev
 RUN apt-get install -y libcanberra-gtk-module
 RUN apt-get install -y pkg-config
 RUN apt-get install -y zip unzip
 COPY ./opencv/opencv-4.7.0.zip /gsis_ai/opencv/opencv-4.7.0.zip
 RUN unzip -d /gsis_ai/opencv/opencv-4.7.0 /gsis_ai/opencv/opencv-4.7.0.zip
-RUN cd /gsis_ai/opencv/opencv-4.7.0/opencv-4.7.0
-RUN mkdir build && cd build
-RUN cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local ..
-RUN make -j$(nproc)
-RUN make install
-RUN opencv_version
+RUN cd /gsis_ai/opencv/opencv-4.7.0/opencv-4.7.0 && \
+    mkdir -p build && cd build && \
+    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/usr/local .. && \
+    make -j$(nproc) && \
+    make install && \
+    opencv_version
 RUN cd /
 
 # 安装expect以便自动安装cuda11.8
@@ -36,6 +44,12 @@ RUN apt-get install -y expect
 
 # 安装cuda11.8(#号注释的命令行,进入容器后再手动执行,下面等同)
 COPY ./nvidia/cuda_11.8.0_520.61.05_linux.run /gsis_ai/nvidia/cuda_11.8.0_520.61.05_linux.run
+RUN chmod +x /gsis_ai/nvidia/cuda_11.8.0_520.61.05_linux.run
+RUN /gsis_ai/nvidia/cuda_11.8.0_520.61.05_linux.run --silent --toolkit
+
+# 然后设置环境变量
+RUN echo 'export PATH=$PATH:/usr/local/cuda-11.8/bin' >> ~/.bashrc && \
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.8/lib64' >> ~/.bashrc
 #RUN /gsis_ai/nvidia/cuda_11.8.0_520.61.05_linux.run
 #RUN sed -i '$a\export PATH=$PATH:/usr/local/cuda-11.8/bin' ~/.bashrc
 #RUN sed -i '$a\export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.8/lib64' ~/.bashrc
@@ -43,7 +57,7 @@ COPY ./nvidia/cuda_11.8.0_520.61.05_linux.run /gsis_ai/nvidia/cuda_11.8.0_520.61
 #RUN nvcc -V
 
 # 安装cudnn8.6.0
-COPY ./nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz /gsis_ai/nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz 
+COPY ./nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz /gsis_ai/nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz
 RUN tar -xvf /gsis_ai/nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz -C /gsis_ai/nvidia/
 RUN cp /gsis_ai/nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive/lib/* /usr/local/cuda/lib64
 RUN cp /gsis_ai/nvidia/cudnn-linux-x86_64-8.6.0.163_cuda11-archive/include/* /usr/local/cuda/include
@@ -52,8 +66,8 @@ RUN cat /usr/local/cuda/include/cudnn_version.h | grep CUDNN_MAJOR -A 2
 # 安装TensorRT8.5.1.7
 COPY ./nvidia/TensorRT-8.5.1.7.Linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz /gsis_ai/nvidia/TensorRT-8.5.1.7.Linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz
 RUN tar -xvf /gsis_ai/nvidia/TensorRT-8.5.1.7.Linux.x86_64-gnu.cuda-11.8.cudnn8.6.tar.gz -C /gsis_ai/nvidia/
-RUN sed -i '$a\export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gsis_ai/nvidia/TensorRT-8.5.1.7/lib' ~/.bashrc 
-RUN source ~/.bashrc
+RUN sed -i '$a\export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gsis_ai/nvidia/TensorRT-8.5.1.7/lib' ~/.bashrc
+RUN bash -c "source ~/.bashrc"
 RUN python3 -m pip install /gsis_ai/nvidia/TensorRT-8.5.1.7/python/tensorrt-8.5.1.7-cp38-none-linux_x86_64.whl -i https://pypi.tuna.tsinghua.edu.cn/simple/
 RUN python3 -m pip install /gsis_ai/nvidia/TensorRT-8.5.1.7/uff/uff-0.6.9-py2.py3-none-any.whl -i https://pypi.tuna.tsinghua.edu.cn/simple/
 RUN python3 -m pip install /gsis_ai/nvidia/TensorRT-8.5.1.7/graphsurgeon/graphsurgeon-0.4.6-py2.py3-none-any.whl -i https://pypi.tuna.tsinghua.edu.cn/simple/
@@ -73,7 +87,8 @@ RUN pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url h
 RUN python -c "import torch; print('CUDA version:', torch.version.cuda); print('CUDA is_available ?:', torch.cuda.is_available()); print('gpu count:',torch.cuda.device_count())"
 
 # 安装yolov8
-pip install ultralytics==8.2.48 -i https://pypi.tuna.tsinghua.edu.cn/simple/
+RUN pip install ultralytics==8.2.48 -i https://pypi.tuna.tsinghua.edu.cn/simple/
+RUN pip install schedule
 
 # 清理安装包及软件包列表
 RUN apt-get clean && rm -rf /var/lib/apt/lists/
@@ -81,6 +96,6 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/
 # 设置JAVA环境变量
 ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64/
 ENV PATH $JAVA_HOME/bin:$PATH
- 
+
 # 设置工作目录
 WORKDIR /data/app/

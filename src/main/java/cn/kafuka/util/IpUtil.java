@@ -211,6 +211,7 @@ public class IpUtil
         //1.默认地址为Unknown
         String address = "Unknown";
 
+        /*
         //2.查询ip
         try {
             //1.通过ip查询实际地址接口
@@ -230,7 +231,7 @@ public class IpUtil
         }catch(Exception e){
             log.error("获取地理位置异常,ip:{}", ip);
             e.printStackTrace();
-        }
+        }*/
 
         return address;
     }

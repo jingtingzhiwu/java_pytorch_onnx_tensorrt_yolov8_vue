@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # MySQL 8
+  mysql:
+    image: mysql:8.0
+    container_name: mysql8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: jskjmy666999
+      MYSQL_DATABASE: algorithm_center
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --sql-mode="STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB
+  mongodb:
+    image: mongodb/mongodb-community-server
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: admin
+      MONGO_INITDB_ROOT_SOURCE: admin
+      MONGO_INITDB_USERNAME: jskjmo
+      MONGO_INITDB_PASSWORD: jskjmo
+      MONGO_INITDB_DB: algcenter
+      TZ: Asia/Shanghai
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongodb/data:/data/db
+    network_mode: "host"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      - --requirepass "root"
+      - --appendonly yes
+    volumes:
+      - ./redis/data:/data
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RocketMQ (NameServer + Broker)
+  rocketmq:
+    image: yuanzhibang/rocketmq-all-in-one
+    container_name: rocketmq
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+      - "9876:9876"
+      - "10909:10909"
+      - "10911:10911"
+      - "10912:10912"
+    environment:
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m -Xmn256m"
+    network_mode: "host"
+
+  # MinIO
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # API端口
+      - "9001:9001"   # 控制台端口
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: jskjmi666999
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    volumes:
+      - ./minio/data:/data
+      - ./minio/config:/root/.minio
+    command: server /data --console-address ":9001"
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  zlmediakit:
+    image: zlmediakit/zlmediakit:master
+    container_name: zlmediakit
+    restart: always
+    environment:
+      MODE: standalone
+      TZ: Asia/Shanghai
+    volumes:
+      - ./zlmediakit/media/bin:/opt/media/bin
+      - ./zlmediakit/media/conf:/opt/media/conf
+    ports:
+      - "11935:1935"
+      - "11080:80"
+      - "11554:554"
+      - "11000:10000"
+      - "11000:10000/udp"
+      - "18000:8000/udp"
+      - "50000-50300:50000-50300/udp"
+    network_mode: "host"
+
+volumes:
+  mysql_data:
+    driver: local
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local

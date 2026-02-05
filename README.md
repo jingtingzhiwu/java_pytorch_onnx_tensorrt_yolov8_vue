@@ -1,3 +1,13 @@
+> 1、修复 `data/linux/algcenter/yolo/tensorrt_infer/` 推理兼容格式  
+> 2、修复 `data/linux/docker/Dockerfile` 镜像构建若干问题  
+> 3、增加 `data/linux/middleware/docker-compose.yaml` 中间件启动  
+> 4、增加 `data/algorithm_model/rebuild_engine.py` 引擎构建脚本(把对应的.onnx拷贝到容器，执行`python3 rebuild_engine.py`，得到.engine，上传到后台)  
+> 5、rocketmq-cpp编译步骤复杂，暂时先去掉  
+
+
+
+----
+
 # java_pytorch_onnx_tensorrt_yolov8_vue 
   视频算法中台系统
 
